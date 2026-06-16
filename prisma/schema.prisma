@@ -1,0 +1,105 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// --- ENUMS (Restricciones a nivel de base de datos) ---
+
+enum Role {
+  ADMIN
+  STAFF
+  CUSTOMER
+}
+
+enum SlotStatus {
+  AVAILABLE
+  RESERVED
+  HOLD
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+// --- MODELOS / TABLAS ---
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(CUSTOMER)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relaciones inversas (Prisma las usa para los tipos, no crean columnas reales en SQL)
+  slotsCreated     AppointmentSlot[] @relation("StaffSlots")
+  appointmentsMade Appointment[]
+  waitlistEntries  WaitlistEntry[]
+
+  @@map("users") // Renombra la tabla en Postgres a minúsculas y plural
+}
+
+model Business {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  slots AppointmentSlot[]
+
+  @@map("businesses")
+}
+
+model AppointmentSlot {
+  id         String     @id @default(uuid()) @db.Uuid
+  businessId String     @map("business_id") @db.Uuid
+  staffId    String     @map("staff_id") @db.Uuid
+  startTime  DateTime   @map("start_time")
+  endTime    DateTime   @map("end_time")
+  status     SlotStatus @default(AVAILABLE)
+
+  // Relaciones Físicas (Claves Foráneas)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  staff    User     @relation("StaffSlots", fields: [staffId], references: [id], onDelete: Cascade)
+
+  // Relaciones 1:1 y 1:N inversas
+  appointment     Appointment?
+  waitlistEntries WaitlistEntry[]
+
+  @@map("appointment_slots")
+}
+
+model Appointment {
+  id         String            @id @default(uuid()) @db.Uuid
+  slotId     String            @unique @map("slot_id") @db.Uuid
+  customerId String            @map("customer_id") @db.Uuid
+  status     AppointmentStatus @default(SCHEDULED)
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  // Relaciones Físicas
+  slot     AppointmentSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  customer User            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("appointments")
+}
+
+model WaitlistEntry {
+  id         String   @id @default(uuid()) @db.Uuid
+  slotId     String   @map("slot_id") @db.Uuid
+  customerId String   @map("customer_id") @db.Uuid
+  priority   Int
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relaciones Físicas
+  slot     AppointmentSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  customer User            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([slotId, customerId]) // Un usuario no puede estar dos veces en la misma lista de espera
+  @@map("waitlist_entries")
+}
