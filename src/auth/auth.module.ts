@@ -9,17 +9,16 @@ import { JwtStrategy } from './jwt.strategy';
 @Module({
   imports: [
     UsersModule,
-    PassportModule.register({ defaultStrategy: 'jwt' }), // Forzamos la estrategia por defecto
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: { 
-        // Aplicamos "as any" para indicarle a TypeScript que confíe en el string de entorno
         expiresIn: (process.env.JWT_EXPIRES_IN || '1d') as any 
       },
     }),
   ],
   providers: [AuthService, JwtStrategy],
   controllers: [AuthController],
-  exports: [AuthService, PassportModule, JwtStrategy], // <-- MODIFICADO: Exportamos Passport y la estrategia
+  exports: [AuthService, PassportModule, JwtStrategy],
 })
 export class AuthModule {}

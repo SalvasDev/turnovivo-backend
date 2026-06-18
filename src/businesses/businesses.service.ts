@@ -6,12 +6,8 @@ import { Business } from '@prisma/client';
 @Injectable()
 export class BusinessesService {
   constructor(private readonly prisma: PrismaService) {}
-
-  // 1. CREAR NEGOCIO
   async create(createBusinessDto: CreateBusinessDto): Promise<Business> {
     const { name, slug } = createBusinessDto;
-
-    // Verificar si el slug ya existe (debe ser único para las URLs del frontend)
     const existingBusiness = await this.prisma.business.findUnique({
       where: { slug },
     });
@@ -24,8 +20,6 @@ export class BusinessesService {
       data: { name, slug },
     });
   }
-
-  // 2. BUSCAR POR SLUG (Para consumo del Frontend en Next.js)
   async findBySlug(slug: string): Promise<Business> {
     const business = await this.prisma.business.findUnique({
       where: { slug },

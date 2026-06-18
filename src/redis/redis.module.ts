@@ -8,9 +8,9 @@ import { PrismaModule } from '../prisma/prisma.module';
 @Module({
   imports: [
     PrismaModule,
-    forwardRef(() => AppointmentsModule), // Resuelve la dependencia circular con las citas
+    forwardRef(() => AppointmentsModule),
   ],
-  providers: [RedisService, RedisSubscriberService], // Agregamos el suscriptor a los proveedores
+  providers: [RedisService, RedisSubscriberService],
   exports: [RedisService, RedisSubscriberService],
 })
 export class RedisModule {}

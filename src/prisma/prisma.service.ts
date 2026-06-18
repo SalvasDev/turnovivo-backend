@@ -5,18 +5,16 @@ import { Pool } from 'pg';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  private readonly pool: Pool;
   
   constructor() {
-    // 1. Creamos una piscina de conexiones (Pool) nativa de PostgreSQL usando tu .env
     const pool = new Pool({ 
       connectionString: process.env.DATABASE_URL 
     });
-    
-    // 2. Creamos el adaptador oficial de Prisma 7
     const adapter = new PrismaPg(pool);
-
-    // 3. Se lo pasamos de forma estricta al constructor superior
     super({ adapter });
+
+    this.pool = pool;
   }
   
   async onModuleInit() {
@@ -26,6 +24,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   async onModuleDestroy() {
     await this.$disconnect();
+    await this.pool.end();
     console.log('🛑 Conexión de PostgreSQL cerrada de forma segura');
   }
 }
