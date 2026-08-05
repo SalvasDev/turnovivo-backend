@@ -3,14 +3,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSlotDto } from './dto/create-slot.dto';
 import { BookAppointmentDto } from './dto/book-appointment.dto';
 import { Appointment, AppointmentSlot, SlotStatus, Prisma } from '@prisma/client';
-import { PrismaClientKnownRequestError } from '@prisma/client-runtime-utils';
 import { JoinWaitlistDto } from './dto/join-waitlist.dto';
 import { RedisService } from '../redis/redis.service';
+import { buildHoldKey, HOLD_TTL_SECONDS, isUniqueConstraintError } from './appointments.utils';
 
 
 @Injectable()
 export class AppointmentsService {
   constructor(private readonly prisma: PrismaService, private readonly redisService: RedisService) {}
+
   async createSlot(staffId: string, createSlotDto: CreateSlotDto): Promise<AppointmentSlot> {
     const { businessId, startTime, endTime } = createSlotDto;
     const business = await this.prisma.business.findUnique({ where: { id: businessId } });
@@ -30,6 +31,7 @@ export class AppointmentsService {
       },
     });
   }
+
   async bookAppointment(customerId: string, bookAppointmentDto: BookAppointmentDto): Promise<Appointment> {
     const { slotId } = bookAppointmentDto;
     return this.prisma.$transaction(async (tx) => {
@@ -59,8 +61,9 @@ export class AppointmentsService {
           },
         });
       } catch (error) {
-        if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
-          throw new ConflictException('Condición de carrera detectada: Este turno acaba de ser reservado por otro cliente.');
+        if (isUniqueConstraintError(error)) {
+          throw new ConflictException(`Condición de carrera detectada: Este turno acaba de
+            ser reservado por otro cliente.`);
         }
         throw error;
       }
@@ -89,7 +92,7 @@ export class AppointmentsService {
     return Promise.all(
       slots.map(async (slot) => {
         if (slot.status === 'HOLD') {
-          const activeUserIdInRedis = await this.redisService.get(`hold:${slot.id}`);
+          const activeUserIdInRedis = await this.redisService.get(buildHoldKey(slot.id));
           return {
             ...slot,
             appointment: activeUserIdInRedis ? { customerId: activeUserIdInRedis } : null,
@@ -100,6 +103,7 @@ export class AppointmentsService {
       })
     );
   }
+
   async joinWaitlist(customerId: string, joinWaitlistDto: JoinWaitlistDto): Promise<any> {
     const { slotId } = joinWaitlistDto;
     const slot = await this.prisma.appointmentSlot.findUnique({ where: { id: slotId } });
@@ -130,13 +134,14 @@ export class AppointmentsService {
           },
         });
       } catch (error) {
-        if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+        if (isUniqueConstraintError(error)) {
           throw new ConflictException('Ya te encuentras registrado en la lista de espera de este turno.');
         }
         throw error;
       }
     });
   }
+
   async cancelAppointment(customerId: string, appointmentId: string): Promise<any> {
     
     return this.prisma.$transaction(async (tx) => {
@@ -172,12 +177,13 @@ export class AppointmentsService {
       return {
         message: 'Cita cancelada con éxito. El espacio ha sido bloqueado en HOLD.',
         notifiedUserId: nextInLine.customerId,
-        expiresInSeconds: 30,
+        expiresInSeconds: HOLD_TTL_SECONDS,
       };
     });
   }
+
   async confirmHold(customerId: string, slotId: string): Promise<Appointment> {
-    const redisKey = `hold:${slotId}`;
+    const redisKey = buildHoldKey(slotId);
     const activeUserInHold = await this.redisService.get(redisKey);
 
     if (!activeUserInHold) {
@@ -205,6 +211,7 @@ export class AppointmentsService {
       });
     });
   }
+
   async leaveWaitlist(customerId: string, slotId: string): Promise<{ message: string }> {
     const entry = await this.prisma.waitlistEntry.findFirst({
       where: { slotId, customerId },
@@ -213,7 +220,7 @@ export class AppointmentsService {
     if (!entry) {
       throw new NotFoundException('No te encuentras registrado en la lista de espera de este turno.');
     }
-    const redisKey = `hold:${slotId}`;
+    const redisKey = buildHoldKey(slotId);
     const holdOwner = await this.redisService.get(redisKey);
     const wasHoldOwner = holdOwner === customerId;
     if (wasHoldOwner) {
@@ -237,8 +244,9 @@ export class AppointmentsService {
 
     return { message: 'Has salido de la lista de espera exitosamente.' };
   }
+
   async declineHold(customerId: string, slotId: string): Promise<any> {
-    const redisKey = `hold:${slotId}`;
+    const redisKey = buildHoldKey(slotId);
 
     const activeUserInHold = await this.redisService.get(redisKey);
     if (!activeUserInHold) {
@@ -264,6 +272,7 @@ export class AppointmentsService {
       };
     });
   }
+
   async handleHoldExpiration(slotId: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       const expiredEntry = await tx.waitlistEntry.findFirst({
@@ -282,6 +291,7 @@ export class AppointmentsService {
       await this.promoteNextInWaitlist(tx, slotId);
     });
   }
+  
   private async promoteNextInWaitlist(
     tx: Prisma.TransactionClient,
     slotId: string,
@@ -303,7 +313,7 @@ export class AppointmentsService {
       where: { id: slotId },
       data: { status: SlotStatus.HOLD },
     });
-    await this.redisService.set(`hold:${slotId}`, nextInLine.customerId, 'EX', 30);
+    await this.redisService.set(buildHoldKey(slotId), nextInLine.customerId, 'EX', HOLD_TTL_SECONDS);
 
     return { customerId: nextInLine.customerId };
   }

@@ -2,97 +2,146 @@
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+# TurnoVivo Backend
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Backend de TurnoVivo construido con NestJS, Prisma 7, PostgreSQL y Redis.
 
-## Description
+## Requisitos previos
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+1. Node.js 20 o superior.
+2. npm 10 o superior.
+3. Docker Desktop encendido.
 
-## Project setup
+## Infraestructura local (PostgreSQL + Redis)
 
-```bash
-$ npm install
-```
+El archivo de infraestructura está en la raíz del workspace:
+[docker-compose.yaml](../docker-compose.yaml)
 
-## Compile and run the project
+Levanta la base de datos y Redis:
 
-```bash
-# development
-$ npm run start
+cd ../
+docker compose up -d postgres redis
 
-# watch mode
-$ npm run start:dev
+Verifica que estén arriba:
 
-# production mode
-$ npm run start:prod
-```
+docker compose ps
 
-## Run tests
+Debes ver:
+1. PostgreSQL en localhost:5433
+2. Redis en localhost:6379
 
-```bash
-# unit tests
-$ npm run test
+## Variables de entorno
 
-# e2e tests
-$ npm run test:e2e
+Este proyecto usa el archivo:
+[.env](.env)
 
-# test coverage
-$ npm run test:cov
-```
+Valores esperados para local:
 
-## Deployment
+DATABASE_URL="postgresql://turnovivo_admin:turnovivo_secret_pass_2026@localhost:5433/turnovivo_db?schema=public"
+PORT=3000
+JWT_SECRET="turnovivo_super_secret_key_2026_signature_hash"
+JWT_EXPIRES_IN="1d"
+REDIS_HOST="localhost"
+REDIS_PORT=6379
+REDIS_PASSWORD="turnovivo_redis_pass_2026"
+REDIS_MAX_RETRY_ATTEMPTS=3
+REDIS_RETRY_BASE_DELAY_MS=200
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Instalación
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Desde la carpeta backend:
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+cd turnovivo-backend
+npm install
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Nota: npm install dispara prisma generate vía postinstall.
 
-## Resources
+## Migraciones y seed de Prisma
 
-Check out a few resources that may come in handy when working with NestJS:
+Aplica el esquema a la base:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+npx prisma migrate deploy
 
-## Support
+Carga datos iniciales (usuarios y slots de ejemplo):
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+npx prisma db seed
 
-## Stay in touch
+Puedes validar el estado de migraciones con:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+npx prisma migrate status
 
-## License
+## Arranque del backend
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Modo desarrollo:
+
+npm run start:dev
+
+Build de verificación:
+
+npm run build
+
+El backend queda en:
+
+http://localhost:3000
+
+## Flujo recomendado para dejarlo funcionando de cero
+
+Desde la raíz del repo, este flujo deja todo listo:
+
+cd /Users/salvador.sanchez/Documents/Learning/practices/turno-vivo-v2
+docker compose up -d postgres redis
+cd turnovivo-backend
+npm install
+npx prisma migrate deploy
+npx prisma db seed
+npm run start:dev
+
+## Troubleshooting rápido
+
+1. Error: tabla no existe (por ejemplo public.users o public.slot_blocks)
+  Causa común: faltan migraciones.
+  Solución:
+  npx prisma migrate deploy
+
+2. Error de Redis ECONNREFUSED o reconexiones infinitas
+  Causa común: Docker apagado o Redis no levantado.
+  Solución:
+  cd ../
+  docker compose up -d redis
+
+3. Error EADDRINUSE en puerto 3000
+  Causa común: otro proceso o contenedor usa 3000.
+  Revisa qué usa el puerto:
+  lsof -nP -iTCP:3000 -sTCP:LISTEN
+  Si es un contenedor no relacionado, detenlo por nombre:
+  docker stop NOMBRE_CONTENEDOR
+
+4. Error al arrancar desde la raíz del repo con npm run start:dev
+  Causa: no existe package.json en la raíz.
+  Solución: ejecuta start:dev desde [turnovivo-backend](.)
+
+## Scripts útiles
+
+1. npm run start:dev
+2. npm run build
+3. npm run test
+4. npm run test:e2e
+5. npm run lint
+
+## Endpoints base de auth
+
+1. POST /users (registro)
+2. POST /auth/login
+3. POST /auth/logout
+
+## Credenciales semilla
+
+Usuario staff:
+barbero.estrella@turnovivo.com
+
+Usuario customer:
+cliente.real@turnovivo.com
+
+Password:
+password123
+

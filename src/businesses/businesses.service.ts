@@ -6,6 +6,7 @@ import { Business } from '@prisma/client';
 @Injectable()
 export class BusinessesService {
   constructor(private readonly prisma: PrismaService) {}
+  
   async create(createBusinessDto: CreateBusinessDto): Promise<Business> {
     const { name, slug } = createBusinessDto;
     const existingBusiness = await this.prisma.business.findUnique({

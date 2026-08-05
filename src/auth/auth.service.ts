@@ -16,11 +16,11 @@ export class AuthService {
     const { email, passwordHash } = loginDto;
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      throw new UnauthorizedException('Credenciales incorrectas.');
+      throw new UnauthorizedException('Credenciales incorrectas');
     }
     const isPasswordValid = await bcrypt.compare(passwordHash, user.passwordHash);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Credenciales incorrectas.');
+      throw new UnauthorizedException('Credenciales incorrectas');
     }
     const payload = { sub: user.id, email: user.email, role: user.role };
     const accessToken = this.jwtService.sign(payload);
@@ -29,9 +29,10 @@ export class AuthService {
 
     return { accessToken };
   }
+
   async logout(userId: string): Promise<{ message: string }> {
     const redisKey = `session:${userId}`;
     await this.redisService.del(redisKey);
-    return { message: 'Sesión cerrada exitosamente en todos los dispositivos.' };
+    return { message: 'Sesión cerrada exitosamente en todos los dispositivos' };
   }
 }

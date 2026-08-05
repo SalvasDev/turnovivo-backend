@@ -9,7 +9,7 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log('🌱 Iniciando el sembrado de la base de datos completa de TurnoVivo...');
+  console.log('- Starting to seed the complete TurnoVivo database...');
   await prisma.appointment.deleteMany();
   await prisma.waitlistEntry.deleteMany();
   await prisma.appointmentSlot.deleteMany();
@@ -33,12 +33,14 @@ async function main() {
       role: Role.CUSTOMER,
     },
   });
+  
   const business = await prisma.business.create({
     data: {
       name: 'Barbería Premium Elegance',
       slug: 'barberia-premium',
     },
   });
+  
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -63,7 +65,7 @@ async function main() {
   }
 
   await prisma.appointmentSlot.createMany({ data: slotsData });
-  console.log(`🎉 ¡Base de datos sembrada con la agenda completa de mañana (12 turnos secuenciales)!`);
+  console.log(`- Database populated with tomorrow's full schedule (12 sequential slots)!`);
 }
 
 main()

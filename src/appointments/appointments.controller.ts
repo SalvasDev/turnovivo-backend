@@ -19,6 +19,7 @@ export class AppointmentsController {
     const staffId = req.user.id;
     return this.appointmentsService.createSlot(staffId, createSlotDto);
   }
+
   @Post('book')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
@@ -26,11 +27,13 @@ export class AppointmentsController {
     const customerId = req.user.id;
     return this.appointmentsService.bookAppointment(customerId, bookAppointmentDto);
   }
+
   @Get('business/:businessId/available')
   @HttpCode(HttpStatus.OK)
   async findAvailableSlots(@Param('businessId') businessId: string) {
     return this.appointmentsService.findAvailableSlots(businessId);
   }
+
   @Post('waitlist/join')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
@@ -38,6 +41,7 @@ export class AppointmentsController {
     const customerId = req.user.id;
     return this.appointmentsService.joinWaitlist(customerId, joinWaitlistDto);
   }
+
   @Post(':id/cancel')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
@@ -45,6 +49,7 @@ export class AppointmentsController {
     const customerId = req.user.id;
     return this.appointmentsService.cancelAppointment(customerId, appointmentId);
   }
+
   @Post('slots/:slotId/confirm-hold')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
@@ -52,6 +57,7 @@ export class AppointmentsController {
     const customerId = req.user.id;
     return this.appointmentsService.confirmHold(customerId, slotId);
   }
+
   @Post('slots/:slotId/decline-hold')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
@@ -59,6 +65,7 @@ export class AppointmentsController {
     const customerId = req.user.id;
     return this.appointmentsService.declineHold(customerId, slotId);
   }
+  
   @Post('slots/:slotId/leave-waitlist')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
