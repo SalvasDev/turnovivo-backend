@@ -17,20 +17,47 @@ export class RedisSubscriberService implements OnModuleInit, OnModuleDestroy {
     const maxRetryAttempts = Number(process.env.REDIS_MAX_RETRY_ATTEMPTS ?? 8);
     const retryBaseDelayMs = Number(process.env.REDIS_RETRY_BASE_DELAY_MS ?? 300);
 
-    this.subscriberClient = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number(process.env.REDIS_PORT) || 6379,
-      password: process.env.REDIS_PASSWORD,
+    // Support full REDIS_URL or parse REDIS_HOST if it's a URL
+    const redisUrl = process.env.REDIS_URL;
+    const rawHost = process.env.REDIS_HOST ?? '';
+
+    const commonOptions = {
       lazyConnect: true,
       enableOfflineQueue: false,
       maxRetriesPerRequest: 1,
-      retryStrategy: (attempts) => {
+      retryStrategy: (attempts: number) => {
         if (attempts > maxRetryAttempts) {
           return null;
         }
         return Math.min(attempts * retryBaseDelayMs, 2000);
       },
-    });
+    } as const;
+
+    if (redisUrl) {
+      this.subscriberClient = new Redis(redisUrl as string, commonOptions as any);
+    } else if (rawHost && (rawHost.includes('://') || rawHost.startsWith('http'))) {
+      try {
+        const u = new URL(rawHost);
+        const host = u.hostname;
+        const port = u.port ? Number(u.port) : Number(process.env.REDIS_PORT) || 6379;
+        const password = u.password || process.env.REDIS_PASSWORD || (u.username || undefined);
+        this.subscriberClient = new Redis({ host, port, password, ...commonOptions } as any);
+      } catch (e) {
+        this.subscriberClient = new Redis({
+          host: process.env.REDIS_HOST || 'localhost',
+          port: Number(process.env.REDIS_PORT) || 6379,
+          password: process.env.REDIS_PASSWORD,
+          ...commonOptions,
+        } as any);
+      }
+    } else {
+      this.subscriberClient = new Redis({
+        host: process.env.REDIS_HOST || 'localhost',
+        port: Number(process.env.REDIS_PORT) || 6379,
+        password: process.env.REDIS_PASSWORD,
+        ...commonOptions,
+      } as any);
+    }
 
     this.subscriberClient.on('error', (error) => {
       this.logger.error(`Error en cliente suscriptor de Redis: ${this.formatRedisError(error)}`);
@@ -51,7 +78,8 @@ export class RedisSubscriberService implements OnModuleInit, OnModuleDestroy {
       this.logger.log('TurnoVivo Core: Escuchando eventos de expiración en el canal Pub/Sub');
     } catch (error) {
       this.logger.error(`No se pudo inicializar el suscriptor Redis: ${this.formatRedisError(error)}`);
-      throw error;
+      this.logger.warn('Continuando sin suscriptor Redis. Las expiraciones se manejarán por polling o manualmente.');
+      return;
     }
 
     this.subscriberClient.on('message', async (channel, expiredKey) => {

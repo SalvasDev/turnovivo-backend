@@ -10,20 +10,48 @@ export class RedisService extends Redis implements OnModuleInit, OnModuleDestroy
     const maxRetryAttempts = Number(process.env.REDIS_MAX_RETRY_ATTEMPTS ?? 8);
     const retryBaseDelayMs = Number(process.env.REDIS_RETRY_BASE_DELAY_MS ?? 300);
 
-    super({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: Number(process.env.REDIS_PORT) || 6379,
-      password: process.env.REDIS_PASSWORD,
+    // Support full REDIS_URL or allow REDIS_HOST to contain a URL (Upstash)
+    const redisUrl = process.env.REDIS_URL;
+
+    const commonOptions = {
       lazyConnect: true,
       enableOfflineQueue: false,
       maxRetriesPerRequest: 1,
-      retryStrategy: (attempts) => {
+      retryStrategy: (attempts: number) => {
         if (attempts > maxRetryAttempts) {
           return null;
         }
         return Math.min(attempts * retryBaseDelayMs, 2000);
       },
-    });
+    } as const;
+
+    if (redisUrl) {
+      super(redisUrl as string, commonOptions as any);
+    } else {
+      // If REDIS_HOST includes a protocol/URL, parse it
+      let host = process.env.REDIS_HOST || 'localhost';
+      let port = Number(process.env.REDIS_PORT) || 6379;
+      let password = process.env.REDIS_PASSWORD;
+      const rawHost = process.env.REDIS_HOST ?? '';
+      if (rawHost && (rawHost.includes('://') || rawHost.startsWith('http'))) {
+        try {
+          const u = new URL(rawHost);
+          host = u.hostname;
+          if (u.port) port = Number(u.port);
+          if (u.password) password = u.password;
+          if (!password && u.username) password = u.username;
+        } catch (e) {
+          // ignore parsing issues and use env fallbacks
+        }
+      }
+
+      super({
+        host,
+        port,
+        password,
+        ...commonOptions,
+      } as any);
+    }
 
     this.on('error', (error) => {
       this.logger.error(`Error de conexion con Redis: ${this.formatRedisError(error)}`);
