@@ -4,6 +4,10 @@ import { Pool } from 'pg';
 import * as bcrypt from 'bcrypt';
 import 'dotenv/config';
 
+const DEMO_DAYS = 7;
+const START_HOUR = 9;
+const SLOTS_PER_DAY = 12;
+
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
@@ -33,39 +37,41 @@ async function main() {
       role: Role.CUSTOMER,
     },
   });
-  
+
   const business = await prisma.business.create({
     data: {
       name: 'Barbería Premium Elegance',
       slug: 'barberia-premium',
     },
   });
-  
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
 
   const slotsData = [];
-  const startHour = 9;
-  const totalSlots = 12;
 
-  for (let i = 0; i < totalSlots; i++) {
-    const slotStart = new Date(tomorrow);
-    slotStart.setHours(startHour + Math.floor(i / 2), (i % 2) * 30, 0, 0);
+  for (let dayOffset = 1; dayOffset <= DEMO_DAYS; dayOffset++) {
+    const day = new Date();
+    day.setDate(day.getDate() + dayOffset);
 
-    const slotEnd = new Date(slotStart);
-    slotEnd.setMinutes(slotStart.getMinutes() + 30);
+    for (let i = 0; i < SLOTS_PER_DAY; i++) {
+      const slotStart = new Date(day);
+      slotStart.setHours(START_HOUR + Math.floor(i / 2), (i % 2) * 30, 0, 0);
 
-    slotsData.push({
-      businessId: business.id,
-      staffId: staff.id,
-      startTime: slotStart,
-      endTime: slotEnd,
-      status: SlotStatus.AVAILABLE,
-    });
+      const slotEnd = new Date(slotStart);
+      slotEnd.setMinutes(slotStart.getMinutes() + 30);
+
+      slotsData.push({
+        businessId: business.id,
+        staffId: staff.id,
+        startTime: slotStart,
+        endTime: slotEnd,
+        status: SlotStatus.AVAILABLE,
+      });
+    }
   }
 
   await prisma.appointmentSlot.createMany({ data: slotsData });
-  console.log(`- Database populated with tomorrow's full schedule (12 sequential slots)!`);
+  console.log(
+    `- Database populated with ${DEMO_DAYS} days of schedule (${slotsData.length} slots)!`,
+  );
 }
 
 main()

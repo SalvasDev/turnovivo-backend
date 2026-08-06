@@ -66,6 +66,9 @@ Carga datos iniciales (usuarios y slots de ejemplo):
 
 npx prisma db seed
 
+Nota:
+El seed crea agenda demo de varios días hacia adelante para evitar que la app quede sin turnos al día siguiente.
+
 Puedes validar el estado de migraciones con:
 
 npx prisma migrate status
@@ -95,6 +98,41 @@ npm install
 npx prisma migrate deploy
 npx prisma db seed
 npm run start:dev
+
+## Demo backend en 5 minutos (soporte para portfolio)
+
+Objetivo:
+Dejar backend listo para que frontend pueda mostrar una experiencia completa sin ajustes manuales.
+
+Pasos:
+1. docker compose up -d postgres redis
+2. cd turnovivo-backend
+3. npm install
+4. npx prisma migrate deploy
+5. npx prisma db seed
+6. npm run start:dev
+
+Validación rápida (opcional):
+1. Consultar negocio demo:
+  curl -s http://localhost:3000/businesses/barberia-premium
+2. Obtener id y validar slots disponibles:
+  curl -s http://localhost:3000/appointments/business/<BUSINESS_ID>/available
+
+Resultado esperado:
+1. Endpoint de negocio responde 200.
+2. Endpoint de slots devuelve arreglo con elementos (> 0).
+3. Frontend puede autenticarse y renderizar cards sin reseed inmediato.
+
+## Despliegue recomendado
+
+Referencia completa:
+[DEPLOYMENT.md](../DEPLOYMENT.md)
+
+Para backend en producción:
+1. Define `DATABASE_URL`, `FRONTEND_URL`, `JWT_SECRET` y variables de Redis.
+2. Ejecuta migraciones antes de arrancar.
+3. Ejecuta seed solo una vez para preparar la demo inicial.
+4. Arranca con `npm run start:prod`.
 
 ## Troubleshooting rápido
 
