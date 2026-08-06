@@ -20,8 +20,9 @@ export class RedisSubscriberService implements OnModuleInit, OnModuleDestroy {
     // Support full REDIS_URL or parse REDIS_HOST if it's a URL
     const redisUrl = process.env.REDIS_URL;
     const rawHost = process.env.REDIS_HOST ?? '';
+    const useTls = process.env.REDIS_TLS === 'true';
 
-    const commonOptions = {
+    const commonOptions: Record<string, unknown> = {
       lazyConnect: true,
       enableOfflineQueue: false,
       maxRetriesPerRequest: 1,
@@ -31,7 +32,11 @@ export class RedisSubscriberService implements OnModuleInit, OnModuleDestroy {
         }
         return Math.min(attempts * retryBaseDelayMs, 2000);
       },
-    } as const;
+    };
+
+    if (useTls) {
+      commonOptions.tls = {};
+    }
 
     if (redisUrl) {
       this.subscriberClient = new Redis(redisUrl as string, commonOptions as any);
