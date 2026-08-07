@@ -20,7 +20,7 @@ export class RedisSubscriberService implements OnModuleInit, OnModuleDestroy {
     // Support full REDIS_URL or parse REDIS_HOST if it's a URL
     const redisUrl = process.env.REDIS_URL;
     const rawHost = process.env.REDIS_HOST ?? '';
-    const useTls = process.env.REDIS_TLS === 'true';
+    const useTls = ['true', '1', 'yes'].includes((process.env.REDIS_TLS ?? '').toLowerCase());
 
     const commonOptions: Record<string, unknown> = {
       lazyConnect: true,

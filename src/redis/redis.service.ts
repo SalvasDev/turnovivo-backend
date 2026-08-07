@@ -12,7 +12,7 @@ export class RedisService extends Redis implements OnModuleInit, OnModuleDestroy
 
     // Support full REDIS_URL or allow REDIS_HOST to contain a URL (Upstash)
     const redisUrl = process.env.REDIS_URL;
-    const useTls = process.env.REDIS_TLS === 'true';
+    const useTls = ['true', '1', 'yes'].includes((process.env.REDIS_TLS ?? '').toLowerCase());
 
     const commonOptions: Record<string, unknown> = {
       lazyConnect: true,
