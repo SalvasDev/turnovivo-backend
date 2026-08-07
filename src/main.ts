@@ -4,6 +4,8 @@ import { ValidationPipe } from '@nestjs/common';
 import dns from 'node:dns';
 import 'dotenv/config';
 
+console.log('DNS order set to ipv4first');
+
 dns.setDefaultResultOrder('ipv4first');
 
 async function bootstrap() {
